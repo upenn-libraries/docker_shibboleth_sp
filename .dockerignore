@@ -1,5 +1,6 @@
 .dockerignore
 .git
 .gitignore
+.gitleaks.toml
 Dockerfile
 README.md
