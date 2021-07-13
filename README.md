@@ -30,10 +30,14 @@ associated with the image.
 ## Build & run
 
 Build docker image:
+```
 docker build -t shibboleth .
+```
 
 Run container:
+```
 docker run -d -p 443:443 -p 80:80 shib
+```
 
 Open browser & check that shib is running:
 https://example.edu/secure
