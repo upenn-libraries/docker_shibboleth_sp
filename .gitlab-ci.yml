@@ -1,71 +1,33 @@
+---
+variables:
+  FF_SCRIPT_SECTIONS: "true"
+  GIT_CLONE_PATH: "${CI_BUILDS_DIR}/${CI_JOB_ID}/${CI_PIPELINE_ID}/${CI_PROJECT_NAME}"
+
 include:
-  - project: "devops/gitlab/ci-templates/docker"
-    ref: "0.0.1"
-    file:
-      - ".build_docker_image.yml"
-      - ".push_docker_image.yml"
-      - ".remove_docker_image.yml"
-  - project: "devops/gitlab/ci-templates/sast"
-    ref: "master"
-    file:
-      - ".shiftleft_container_scanning.yml"
-      - ".trivy_container_scanning.yml"
-  - template: "Workflows/MergeRequest-Pipelines.gitlab-ci.yml"
+  - component: $CI_SERVER_FQDN/devops/gitlab/components/sast/secret_scan@~latest
+  - component: $CI_SERVER_FQDN/devops/gitlab/components/docker/stage_build@~latest
+    inputs:
+      ci_requirements_file: ".gitlab/ci-requirements.yml"
+      matrix:
+        - RUNNER: build
+          DOCKER_BUILD_PLATFORM: "linux/amd64"
+      needs_build:
+        - secret_detection
+      platforms: '["linux/amd64"]'
+  - component: $CI_SERVER_FQDN/devops/gitlab/components/sast/trivy@~latest
+    inputs:
+      ci_requirements_file: ".gitlab/ci-requirements.yml"
+      needs:
+        - "amend_manifest"
+      stage: "test"
+  - component: $CI_SERVER_FQDN/devops/gitlab/components/docker/stage_finalize@~latest
+    inputs:
+      ci_requirements_file: ".gitlab/ci-requirements.yml"
+      needs_copy:
+        - trivy_scan
 
 stages:
-  - .pre
-  - sast
-  - push
-  - .post
-
-build_image:
-  stage: .pre
-  extends:
-    - .build_docker_image
-  tags:
-    - build
-
-shiftleft_container_scanning:
-  stage: sast
-  extends:
-    - .shiftleft_container_scanning
-  tags:
-    - build
-  allow_failure: true
-
-trivy_container_scanning:
-  stage: sast
-  extends:
-    - .trivy_container_scanning
-  tags:
-    - build
-  allow_failure: true
-
-push_latest_image_to_registry:
-  stage: push
-  extends:
-    - .push_docker_image
-  variables:
-    IMAGE_TAGS: "${CI_COMMIT_REF_SLUG} ${CI_COMMIT_SHA} ${CI_COMMIT_SHORT_SHA} ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME} latest"
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  tags:
-    - build
-
-push_image_to_registry:
-  stage: push
-  extends:
-    - .push_docker_image
-  rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
-  tags:
-    - build
-
-remove_image:
-  stage: .post
-  extends:
-    - .remove_docker_image
-  rules:
-    - when: always
-  tags:
-    - build
+  - secret_check
+  - build
+  - test
+  - finalize

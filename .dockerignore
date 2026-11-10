@@ -1,6 +1,7 @@
 .dockerignore
 .git
 .gitignore
+.gitlab
 .gitlab-ci.yml
 .gitleaks.toml
 Dockerfile
