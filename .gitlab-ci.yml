@@ -8,9 +8,6 @@ include:
   - component: $CI_SERVER_FQDN/devops/gitlab/components/docker/stage_build@~latest
     inputs:
       ci_requirements_file: ".gitlab/ci-requirements.yml"
-      matrix:
-        - RUNNER: build
-          DOCKER_BUILD_PLATFORM: "linux/amd64"
       needs_build:
         - secret_detection
       platforms: '["linux/amd64"]'
@@ -18,7 +15,7 @@ include:
     inputs:
       ci_requirements_file: ".gitlab/ci-requirements.yml"
       needs:
-        - "amend_manifest"
+        - "build_and_push_docker_images"
       stage: "test"
   - component: $CI_SERVER_FQDN/devops/gitlab/components/docker/stage_finalize@~latest
     inputs:
